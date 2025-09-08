@@ -65,6 +65,8 @@ const LoginScreen = ({ navigation }: any) => {
           );
           setUserDetails(res?.details);
           await AsyncStorage.setItem("loginFlag", "true");
+          const findToken = res.details?.meta_data?.find((item: any) => item?.key === "react_login_token")?.value;
+          await AsyncStorage.setItem("payment_token", findToken);
           navigation.reset({
             index: 0,
             routes: [{ name: "DrawerNavigation" }],

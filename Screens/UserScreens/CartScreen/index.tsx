@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
+  Linking,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import HomeHeader from "../../Components/HomeHeader";
@@ -26,7 +27,7 @@ import {
   updateStatusOrderApi,
 } from "../../../store/Services/Others";
 import Toast from "react-native-toast-message";
-// import RazorpayCheckout from "react-native-razorpay";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const CartScreen = ({ navigation }: any) => {
   const [cartApiResponse, setcartApiResponse]: any = useState([]);
@@ -101,13 +102,17 @@ const CartScreen = ({ navigation }: any) => {
     />
   );
 
-  const updateOrderStatusManager = (order_id: any, transaction_id: any, status: any) => {
-    console.log('first', {
-        order_id,
-        user_id: userDetails?.id,
-        transaction_id,
-        status,
-      })
+  const updateOrderStatusManager = (
+    order_id: any,
+    transaction_id: any,
+    status: any
+  ) => {
+    console.log("first", {
+      order_id,
+      user_id: userDetails?.id,
+      transaction_id,
+      status,
+    });
     updateStatusOrderApi({
       body: {
         order_id,
@@ -125,50 +130,30 @@ const CartScreen = ({ navigation }: any) => {
       });
   };
 
-  // const payWithRazorpay = (userDetails: any, cartBottomPrices: any) => {
-  //   setLoading(true);
-  //   createOrderApi({
-  //     query: {
-  //       u_id: userDetails?.id,
-  //       payment_method: "razorpay",
-  //       amount: cartBottomPrices?.total
-  //     },
-  //   })
-  //     ?.then((res: any) => {
-  //       var options: any = {
-  //         description: "Order Payment",
-  //         image:
-  //           "https://tradinggurukul.com/trading_backend/wp-content/uploads/2025/08/tradinggurukul-logo-e1754378245418.jpeg",
-  //         currency: "INR",
-  //         key: "rzp_live_MEv3w5udH0dgor",
-  //         amount: cartBottomPrices?.total * 100,
-  //         order_id: res?.data?.razorpay_order?.id,
-  //         name: "Trading Gurukul",
-  //         prefill: {
-  //           email: userDetails?.billing?.email,
-  //           contact: userDetails?.billing?.phone,
-  //           name: userDetails?.username,
-  //         },
-  //         theme: { color: theme.colors.primary },
-  //       };
+  const proceedToCheckOutHandler = (
+    userDetails: any,
+    cartBottomPrices: any
+  ) => {
+    setLoading(true);
+    createOrderApi({
+      query: {
+        u_id: userDetails?.id,
+        payment_method: "cashfree",
+        amount: cartBottomPrices?.total,
+      },
+    })
+      ?.then(async (res: any) => {
+        const payment_token = await AsyncStorage.getItem("payment_token");
+        const paymentUrl = `${res?.payment_url}&token=${payment_token}`;
 
-  //       RazorpayCheckout.open(options)
-  //         .then((data) => {
-  //           alert(`Success: ${data.razorpay_payment_id}`);
-  //           setLoading(false);
-  //           updateOrderStatusManager(res?.data?.order_id, data?.razorpay_payment_id, "completed");
-  //         })
-  //         .catch((error) => {
-  //           alert(`Error: ${error.code} | ${error.description}`);
-  //           setLoading(false);
-  //           updateOrderStatusManager(res?.data?.order_id, error?.details?.metadata?.payment_id, error?.details?.reason);
-  //         });
-  //     })
-  //     ?.catch((err) => {
-  //       console.log("err", err);
-  //       setLoading(false);
-  //     });
-  // };
+        if (paymentUrl) {
+          Linking.openURL(paymentUrl); 
+        }
+
+        setLoading(false);
+      })
+      ?.catch(() => setLoading(false));
+  };
 
   return (
     <SafeAreaView
@@ -235,7 +220,9 @@ const CartScreen = ({ navigation }: any) => {
 
             <TouchableOpacity
               style={styles.checkoutButton}
-              // onPress={() => payWithRazorpay(userDetails, cartBottomPrices)}
+              onPress={() =>
+                proceedToCheckOutHandler(userDetails, cartBottomPrices)
+              }
             >
               <Text style={styles.checkoutButtonText}>Proceed to checkout</Text>
             </TouchableOpacity>
